@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    try { if (!JSON.parse(localStorage.getItem('cmuh-session'))) throw 0; }
+    catch (e) { location.replace('login.html'); }
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>CMU Hangout</title>
+  <link href="https://fonts.googleapis.com/css2?family=Gelasio:wght@600;700&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('cmuh-theme');
+        if (theme) document.documentElement.dataset.theme = theme;
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <div class="logo"><a href="index.html">CMU<br>HANGOUT</a></div>
+
+    <label class="search">
+      <svg viewBox="0 0 24 24" style="font-size:28px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/></svg>
+      <input id="q" type="search" placeholder="Search posts or #tags">
+    </label>
+
+    <aside class="side">
+      <a class="post-btn" href="post.html">Post!</a>
+      <div class="tags" id="tags"></div>
+    </aside>
+
+    <main class="feed" id="feed"></main>
+
+    <aside class="right">
+      <a class="mid on" href="index.html" title="Home">
+        <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+      </a>
+      <a class="mid" href="profile.html" title="Profile">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3.2"/><path d="M5.5 19c1.5-3 4-4 6.5-4s5 1 6.5 4"/></svg>
+      </a>
+      <a class="mid" href="message.html" title="Messages">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 7 9-7"/></svg>
+        <span class="badge" id="badge" hidden></span>
+      </a>
+      <button class="mid" id="theme" title="Toggle theme">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+      </button>
+      <button class="mid" id="logout" title="Log out">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </aside>
+
+  </div>
+
+  <dialog id="view"></dialog>
+
+  <dialog id="ask" class="ask">
+    <h3 id="askTitle"></h3>
+    <p id="askText"></p>
+    <div class="row">
+      <button id="askNo">Cancel</button>
+      <button class="go" id="askOk">OK</button>
+    </div>
+  </dialog>
+
+  <script>
+    const POSTS_KEY = 'cmuh-posts2';
+    const SESSION_KEY = 'cmuh-session';
+    const MESSAGES_KEY = 'cmuh-messages';
+    const DEFAULT_TAGS = ['#sports', '#running', '#basketball', '#football', '#swimmingwithus'];
+    const DEFAULT_AVATAR = 'pic/profile.png';
+
+    const $ = (id) => document.getElementById(id);
+
+    function load(key, fallback) {
+      try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+      catch (e) { return fallback; }
+    }
+
+    function save(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+    }
+
+    function esc(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(text).replace(/[&<>"']/g, (ch) => map[ch]);
+    }
+
+    function timeAgo(time) {
+      const min = Math.floor((Date.now() - time) / 60000);
+      if (min < 1) return 'just now';
+      if (min < 60) return `${min} min ago`;
+      const hr = Math.floor(min / 60);
+      return hr < 24 ? `${hr} h ago` : `${Math.floor(hr / 24)} d ago`;
+    }
+
+    function ask(title, text, okLabel, danger) {
+      return new Promise((resolve) => {
+        const dlg = $('ask');
+        $('askTitle').textContent = title;
+        $('askText').textContent = text;
+        $('askOk').textContent = okLabel;
+        $('askOk').className = danger ? 'go danger' : 'go';
+        const done = (value) => { dlg.close(); resolve(value); };
+        $('askOk').onclick = () => done(true);
+        $('askNo').onclick = () => done(false);
+        dlg.oncancel = () => resolve(false);
+        dlg.showModal();
+      });
+    }
+
+    function avatarHtml(name) {
+      const profile = load('cmuh-profile:' + String(name).toLowerCase() + '@cmu.ac.th', {});
+      return profile.avatar
+        ? `<img src="${profile.avatar}" alt="">`
+        : `<img class="default" src="${DEFAULT_AVATAR}" alt="">`;
+    }
+
+    function updateBadge() {
+      const lastRead = load('cmuh-read:' + ME, {});
+      const n = load(MESSAGES_KEY, []).filter((m) => m.to === ME && m.t > (lastRead[m.from] || 0)).length;
+      $('badge').textContent = n > 9 ? '9+' : n;
+      $('badge').hidden = !n;
+    }
+
+    const ME = (load(SESSION_KEY, {}).username || 'CMU').split('@')[0];
+
+    let posts = load(POSTS_KEY, [{
+      id: 1,
+      author: 'Mint',
+      title: 'GO JOGGING',
+      location: 'Huay Kaew Reservoir, Chiang Mai',
+      max: 11,
+      interest: ['running', 'healthy', 'meeting'],
+      details: "Let's go jogging together......",
+      t: Date.now() - 3600000,
+      members: ['Mint', 'Ton', 'Fah'],
+      comments: []
+    }]);
+
+    let activeTag = null;
+    let currentId = null;
+
+    const savePosts = () => save(POSTS_KEY, posts);
+
+    function chipsHtml(post) {
+      return post.interest.map((t) => `<span class="chip">#${esc(t)}</span>`).join('');
+    }
+
+    function postCard(p) {
+      return `
+        <article class="post" data-id="${p.id}">
+          <a class="head author-link" href="profile.html?user=${encodeURIComponent(p.author)}" title="View ${esc(p.author)}'s profile">
+            <span class="avatar">${avatarHtml(p.author)}</span>
+            <div>
+              <div class="name">${esc(p.author)}</div>
+              <div class="time">${timeAgo(p.t)}</div>
+            </div>
+          </a>
+          <h3>${esc(p.title)}</h3>
+          <div class="meta">📍 ${esc(p.location)} · 👥 ${p.members.length}/${p.max}</div>
+          <div class="chips">${chipsHtml(p)}</div>
+        </article>`;
+    }
+
+    function renderTags() {
+      const tags = new Set(DEFAULT_TAGS);
+      posts.forEach((p) => p.interest.forEach((t) => tags.add('#' + t.toLowerCase())));
+
+      $('tags').innerHTML = [...tags].map((t) =>
+        `<button class="tag ${t === activeTag ? 'on' : ''}" data-t="${esc(t)}">${esc(t)}</button>`
+      ).join('');
+    }
+
+    function render() {
+      const query = $('q').value.trim().toLowerCase();
+
+      const list = posts.filter((p) => {
+        const tagOk = !activeTag || p.interest.some((t) => '#' + t.toLowerCase() === activeTag);
+        const text = (p.title + p.details + p.location + p.author + p.interest.join(' ')).toLowerCase();
+        return tagOk && (!query || text.includes(query));
+      });
+
+      $('feed').innerHTML = list.length
+        ? list.map(postCard).join('')
+        : '<div class="empty">No posts match your search</div>';
+
+      renderTags();
+    }
+
+    function drawView() {
+      const p = posts.find((x) => x.id === currentId);
+      if (!p) return;
+
+      const joined = p.members.includes(ME);
+      const full = p.members.length >= p.max;
+      const joinLabel = joined ? 'LEAVE' : (full ? 'FULL' : 'JOIN');
+      const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(p.location)}&output=embed`;
+
+      $('view').innerHTML = `
+        <div class="detail">
+          <div class="top">
+            <div>
+              <h2>${esc(p.title)}</h2>
+              <h4 style="margin-top:10px">Members (${p.members.length}/${p.max})</h4>
+            </div>
+            <button class="join ${joined ? 'on' : ''}" id="join" ${full && !joined ? 'disabled' : ''}>${joinLabel}</button>
+          </div>
+
+          <div class="time">by <a class="author-link" href="profile.html?user=${encodeURIComponent(p.author)}">${esc(p.author)}</a></div>
+          <p style="margin:8px 0">${esc(p.details)}</p>
+          <div class="chips">${chipsHtml(p)}</div>
+
+          <h4>Location</h4>
+          <div class="time" style="margin-bottom:6px">📍 ${esc(p.location)}</div>
+          <iframe loading="lazy" src="${mapUrl}"></iframe>
+
+          <h4>Comment</h4>
+          ${p.comments.map((c) => `<div class="cmt"><b>${esc(c.name)}</b>${esc(c.text)}</div>`).join('')}
+          <input id="cin" placeholder="Write a comment and press Enter" maxlength="300">
+
+          <div class="row">
+            ${p.author === ME ? '<button id="del" class="del">Delete post</button>' : ''}
+            <button id="close">Close</button>
+          </div>
+        </div>`;
+    }
+
+    $('feed').addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      const card = e.target.closest('.post');
+      if (!card) return;
+      currentId = Number(card.dataset.id);
+      drawView();
+      $('view').showModal();
+    });
+
+    $('tags').addEventListener('click', (e) => {
+      const btn = e.target.closest('.tag');
+      if (!btn) return;
+      activeTag = activeTag === btn.dataset.t ? null : btn.dataset.t;
+      render();
+    });
+
+    $('view').addEventListener('click', async (e) => {
+      const p = posts.find((x) => x.id === currentId);
+
+      if (e.target.id === 'close' || e.target === $('view')) {
+        $('view').close();
+        return;
+      }
+
+      if (e.target.id === 'del' && p && p.author === ME) {
+        if (!await ask('Delete this post?', 'This post will be removed permanently.', 'Delete', true)) return;
+        posts = posts.filter((x) => x.id !== p.id);
+        savePosts();
+        $('view').close();
+        render();
+        return;
+      }
+
+      if (e.target.id === 'join' && p) {
+        p.members = p.members.includes(ME)
+          ? p.members.filter((m) => m !== ME)
+          : [...p.members, ME];
+        savePosts();
+        drawView();
+        render();
+      }
+    });
+
+    $('view').addEventListener('keydown', (e) => {
+      if (e.target.id !== 'cin' || e.key !== 'Enter') return;
+
+      const text = e.target.value.trim();
+      const p = posts.find((x) => x.id === currentId);
+      if (!text || !p) return;
+
+      p.comments.push({ name: ME, text, t: Date.now() });
+      savePosts();
+      drawView();
+      $('cin').focus();
+    });
+
+    $('q').addEventListener('input', render);
+
+    $('theme').onclick = () => {
+      const root = document.documentElement;
+      const isDark = getComputedStyle(root).getPropertyValue('--bg').trim() === '#1b1818';
+      const next = isDark ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem('cmuh-theme', next); } catch (e) {}
+    };
+
+    $('logout').onclick = async () => {
+      if (!await ask('Log out?', 'You will need to log in again to use CMU Hangout.', 'Log out')) return;
+      try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+      location.replace('login.html');
+    };
+
+    const params = new URLSearchParams(location.search);
+    activeTag = params.get('tag');
+    $('q').value = params.get('q') || '';
+
+    render();
+    updateBadge();
+
+    const openId = Number(params.get('post'));
+    if (openId && posts.some((p) => p.id === openId)) {
+      currentId = openId;
+      drawView();
+      $('view').showModal();
+    }
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === MESSAGES_KEY) updateBadge();
+    });
+  </script>
+</body>
+</html>

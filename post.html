@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    // Auth guard: if nobody is logged in, go back to the login page
+    try { if (!JSON.parse(localStorage.getItem('cmuh-session'))) throw 0; }
+    catch (e) { location.replace('login.html'); }
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Create Your Post - CMU Hangout</title>
+  <link href="https://fonts.googleapis.com/css2?family=Gelasio:wght@600;700&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+  <script>
+    // Apply the saved theme (light / dark) before the page is drawn
+    (function () {
+      try {
+        var theme = localStorage.getItem('cmuh-theme');
+        if (theme) document.documentElement.dataset.theme = theme;
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="pg">
+
+    <div class="logo"><a href="index.html">CMU<br>HANGOUT</a></div>
+
+    <form class="panel" id="f">
+      <h1>Create Your Post</h1>
+
+      <input id="title" placeholder="Title" maxlength="60" required>
+
+      <div class="r2">
+        <input id="location" placeholder="Location (e.g. Huay Kaew Reservoir)" maxlength="100" required>
+        <input id="max" type="number" min="2" max="500" placeholder="Max people" title="Maximum number of people">
+      </div>
+
+      <input id="interest" placeholder="Interests (comma-separated, e.g. running, healthy)" maxlength="80">
+      <textarea id="details" placeholder="Details"></textarea>
+
+      <button class="send" type="submit">Post</button>
+      <a class="back" href="index.html">Cancel</a>
+    </form>
+
+  </div>
+
+  <script>
+    const POSTS_KEY = 'cmuh-posts2';
+    const SESSION_KEY = 'cmuh-session';
+
+    const $ = (id) => document.getElementById(id);
+
+    function load(key, fallback) {
+      try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+      catch (e) { return fallback; }
+    }
+
+    const ME = (load(SESSION_KEY, {}).username || 'CMU').split('@')[0];
+
+    $('f').addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      // "running, #healthy" -> ['running', 'healthy']
+      const interest = $('interest').value
+        .split(/[,\s]+/)
+        .map((t) => t.replace(/^#+/, '').trim())
+        .filter(Boolean);
+
+      const post = {
+        id: Date.now(),
+        author: ME,
+        t: Date.now(),
+        title: $('title').value.trim(),
+        location: $('location').value.trim(),
+        max: Math.max(2, parseInt($('max').value, 10) || 10),   // default: 10 people
+        interest,
+        details: $('details').value.trim(),
+        members: [ME],        // the author is the first member
+        comments: []
+      };
+
+      const posts = load(POSTS_KEY, null) || [];
+      posts.unshift(post);
+
+      try { localStorage.setItem(POSTS_KEY, JSON.stringify(posts)); } catch (err) {}
+
+      location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>

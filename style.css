@@ -1,0 +1,964 @@
+/* ---------- 1. Colour variables and themes ---------- */
+:root {
+  --bg: #f0e9e8;
+  --card: #f5f5f5;
+  --chip: #d4d4d4;
+  --bar: #d9d9d9;
+  --field: #efe9e9;
+  --ink: #1a1a1a;
+  --muted: #666;
+  --icon: #444;
+  --brand: #1e0a78;
+  --brand-ink: #fff;
+
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Dark mode: follows the system setting */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b1818;
+    --card: #272424;
+    --chip: #3a3636;
+    --bar: #383434;
+    --field: #3a3636;
+    --ink: #f1eded;
+    --muted: #aaa;
+    --icon: #ddd;
+    --brand: #5b45e0;
+  }
+}
+
+/* Dark mode: toggled manually with the theme button */
+:root[data-theme="dark"] {
+  --bg: #1b1818;
+  --card: #272424;
+  --chip: #3a3636;
+  --bar: #383434;
+  --field: #3a3636;
+  --ink: #f1eded;
+  --muted: #aaa;
+  --icon: #ddd;
+  --brand: #5b45e0;
+}
+
+
+/* ---------- 2. Base ---------- */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Noto Sans Thai', 'Gelasio', Georgia, sans-serif;
+}
+
+svg {
+  width: 1em;
+  height: 1em;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+[hidden] { display: none !important; }
+
+.logo {
+  font: 700 24px/1.1 'Gelasio', Georgia, serif;
+  text-align: center;
+  letter-spacing: .5px;
+}
+
+.logo a { color: inherit; text-decoration: none; }
+
+
+/* ---------- 3. Home page ---------- */
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 220px 1fr 180px;
+  grid-template-areas:
+    "logo search ."
+    "side feed   right";
+  gap: 20px 24px;
+  align-items: start;
+}
+
+.app .logo { grid-area: logo; }
+
+/* Search bar */
+.search {
+  grid-area: search;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 18px;
+  background: var(--bar);
+  border-radius: 999px;
+}
+
+.search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+
+/* Left column: Post! button and hashtags */
+.side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: sticky;
+  top: 20px;
+}
+
+.post-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  background: var(--brand);
+  color: var(--brand-ink);
+  border: 0;
+  border-radius: 22px;
+  font: 700 20px 'Gelasio', Georgia, serif;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.post-btn:hover { filter: brightness(1.15); }
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 10px 8px;
+  min-height: 200px;
+  padding: 18px;
+  background: var(--card);
+  border-radius: 24px;
+}
+
+.tag {
+  padding: 3px 10px;
+  background: var(--chip);
+  color: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  font: 700 11px 'Gelasio', serif;
+  cursor: pointer;
+}
+
+.tag.on { background: var(--brand); color: var(--brand-ink); }
+
+/* Post feed */
+.feed {
+  grid-area: feed;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.post {
+  min-height: 130px;
+  padding: 16px 20px;
+  background: var(--card);
+  border-radius: 28px;
+  cursor: pointer;
+}
+
+.post h3 {
+  margin: 8px 0 2px 50px;
+  font: 700 20px 'Gelasio', 'Noto Sans Thai', Georgia, serif;
+}
+
+.head { display: flex; align-items: center; gap: 10px; }
+
+.avatar {
+  display: flex;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar img.default { transform: scale(1.28); }
+
+.name { font-weight: 600; }
+.time { font-size: 12px; color: var(--muted); }
+.meta { margin-left: 50px; font-size: 13px; color: var(--muted); }
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0 50px;
+}
+
+.chip {
+  padding: 2px 10px;
+  background: var(--chip);
+  border-radius: 999px;
+  font: 700 11px 'Gelasio', serif;
+}
+
+.empty { padding: 40px; text-align: center; color: var(--muted); }
+
+/* Right column: home, profile, messages, theme, log out */
+.right {
+  grid-area: right;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 30px 0;
+  background: var(--card);
+  border-radius: 28px;
+  position: sticky;
+  top: 20px;
+}
+
+.right button,
+.right a {
+  position: relative;
+  display: flex;
+  border: 0;
+  background: none;
+  color: var(--icon);
+  cursor: pointer;
+}
+
+.right .mid { font-size: 38px; }
+
+/* Narrow screens: columns stack and the right column becomes a bar */
+@media (max-width: 860px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-areas: "logo" "search" "side" "feed" "right";
+    padding: 14px;
+  }
+
+  .side,
+  .right { position: static; }
+
+  .right {
+    flex-direction: row;
+    justify-content: center;
+    gap: 28px;
+    padding: 16px;
+  }
+
+  .right .mid { font-size: 34px; }
+  .tags { min-height: 0; }
+}
+
+
+/* ---------- 4. Dialogs ---------- */
+dialog {
+  width: min(480px, 92vw);
+  padding: 22px;
+  background: var(--card);
+  color: var(--ink);
+  border: 0;
+  border-radius: 24px;
+}
+
+dialog::backdrop { background: rgba(0, 0, 0, .45); }
+
+dialog input {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bar);
+  color: var(--ink);
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+}
+
+/* Post detail dialog (index.html) */
+#view { width: min(540px, 94vw); max-height: 90vh; overflow: auto; }
+
+.detail h2 { margin: 0; font: 700 34px 'Gelasio', Georgia, serif; }
+
+.detail h4 {
+  margin: 14px 0 6px;
+  font: 700 20px 'Gelasio', 'Noto Sans Thai', Georgia, serif;
+}
+
+.detail .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.detail .chips { margin: 8px 0 0; }
+
+.detail iframe {
+  width: 100%;
+  height: 190px;
+  border: 0;
+  border-radius: 12px;
+}
+
+.join {
+  padding: 14px 22px;
+  background: var(--brand);
+  color: var(--brand-ink);
+  border: 0;
+  border-radius: 14px;
+  font: 700 18px 'Gelasio', serif;
+  cursor: pointer;
+}
+
+.join.on { background: var(--chip); color: var(--ink); }
+.join:disabled { opacity: .5; cursor: not-allowed; }
+
+.cmt {
+  margin-bottom: 8px;
+  padding: 8px 14px;
+  background: var(--bar);
+  border-radius: 14px;
+  font-size: 14px;
+}
+
+.cmt b { margin-right: 6px; }
+
+/* Button row at the bottom of every dialog */
+.row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+
+.row button {
+  padding: 10px 20px;
+  background: var(--chip);
+  color: var(--ink);
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.row .del { margin-right: auto; background: #c62828; color: #fff; }
+.row .del:hover { filter: brightness(1.15); }
+.row .go { background: var(--brand); color: var(--brand-ink); }
+.row .danger { background: #c62828; color: #fff; }
+
+/* Shared confirm dialog (log out, delete profile, remove friend) */
+.ask { width: min(380px, 92vw); }
+.ask h3 { margin: 0 0 8px; font: 700 22px 'Gelasio', 'Noto Sans Thai', Georgia, serif; }
+.ask p { margin: 0; color: var(--muted); }
+
+
+/* ---------- 5. Create Post page ---------- */
+.pg { position: relative; min-height: 100vh; padding: 48px 20px; }
+
+.pg .logo { position: absolute; top: 30px; left: 30px; text-align: left; }
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 32px 36px;
+  background: var(--card);
+  border-radius: 32px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .12);
+}
+
+.panel h1 { margin: 0; font: 400 22px 'Gelasio', 'Noto Sans Thai', Georgia, serif; }
+
+.panel input,
+.panel textarea {
+  width: 100%;
+  padding: 14px 20px;
+  background: var(--field);
+  color: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 17px;
+  outline: none;
+}
+
+.panel textarea { min-height: 180px; border-radius: 28px; resize: vertical; }
+
+/* Location and max people row */
+.r2 { display: flex; gap: 12px; }
+.r2 input:first-child { flex: 1; min-width: 0; }
+.r2 input:last-child { flex: none; width: 120px; }
+
+.send {
+  align-self: center;
+  margin-top: 10px;
+  padding: 16px 70px;
+  background: #fbfd9b;
+  color: #000;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.back { align-self: center; color: var(--muted); text-decoration: none; }
+
+@media (max-width: 960px) {
+  .pg .logo { position: static; margin-bottom: 20px; text-align: center; }
+}
+
+@media (max-width: 520px) {
+  .panel { padding: 24px 18px; }
+}
+
+
+/* ---------- 6. Login and Sign up page ---------- */
+.auth * { box-sizing: border-box; margin: 0; padding: 0; }
+
+body.auth {
+  margin: 0;
+  background: #a57cc9;
+  color: #1a086e;
+  font-family: 'Georgia', 'Times New Roman', serif;
+}
+
+.auth input,
+.auth button { font-family: inherit; }
+
+.auth .hidden { display: none !important; }
+
+/* Page layout: stripe, logo panel, form */
+.auth .wrap {
+  display: grid;
+  grid-template-columns: clamp(30px, 5.5vw, 70px) clamp(220px, 28vw, 360px) 1fr;
+  min-height: 100vh;
+}
+
+.auth .strip {
+  background: repeating-linear-gradient(160deg, #8e66b8 0 14px, #b79bd6 14px 30px, #7a53a6 30px 40px);
+  filter: blur(7px);
+  opacity: .75;
+}
+
+/* Left logo panel */
+.auth .brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #c8b5e0;
+}
+
+.auth .mini {
+  position: absolute;
+  top: 70px;
+  left: 32px;
+  display: flex;
+  gap: 12px;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.auth .mini i { width: 1px; background: #1a086e; opacity: .6; }
+
+.auth .big {
+  font-size: clamp(30px, 3.6vw, 46px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: .3px;
+}
+
+.auth .mini img.logo { width: 45px; height: 45px; object-fit: contain; margin-left: 10px; opacity: .6; }
+.auth .big img.logo { width: 75px; height: 75px; object-fit: contain; opacity: .6; }
+
+/* Form card */
+.auth .stage { display: flex; align-items: center; justify-content: center; padding: 32px 20px; }
+
+.auth .card {
+  width: 100%;
+  max-width: 470px;
+  padding: 34px 50px 36px;
+  background: #e0d3ee;
+  border: 2px solid #1a086e;
+  border-radius: 14px;
+  box-shadow: 0 16px 34px rgba(40, 10, 90, .35);
+}
+
+.auth .header-banner {
+  margin-bottom: 28px;
+  text-align: center;
+  font-size: 46px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.auth .form-group { margin-bottom: 16px; }
+.auth .form-label { display: block; margin-bottom: 6px; font-size: 17px; font-weight: 700; }
+.auth .field { position: relative; }
+
+.auth .field svg {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 22px;
+  color: #1a086e;
+}
+
+.auth .form-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 20px 0 52px;
+  background: #fff;
+  color: #222;
+  border: 1.5px solid #1a086e;
+  border-radius: 999px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-variant-numeric: lining-nums;
+  font-size: 16px;
+  outline: none;
+}
+
+.auth .form-input.has-eye { padding-right: 56px; }
+
+/* Hide the browser's built-in show-password / clear icons (Edge) so only our button shows */
+.auth input::-ms-reveal,
+.auth input::-ms-clear { display: none; }
+
+.auth .form-input::placeholder { color: #9a9a9a; }
+
+/* Show / hide password button: always visible, sits inside the password field */
+.auth .eye {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  transform: translateY(-50%);
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  color: #1a086e;
+  cursor: pointer;
+}
+
+.auth .eye:hover { background: rgba(26, 8, 110, .1); }
+
+.auth .field .eye svg {
+  position: static;
+  transform: none;
+  font-size: 22px;
+}
+.auth .form-input:focus { box-shadow: 0 0 0 3px rgba(26, 8, 110, .25); }
+
+.auth .msg { min-height: 20px; margin: 4px 0; text-align: center; font-size: 14px; color: #b3261e; }
+
+.auth .btn-action {
+  width: 100%;
+  height: 54px;
+  margin-top: 10px;
+  background: #25105f;
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(110, 60, 200, .45);
+  transition: transform .15s, filter .15s;
+}
+
+.auth .btn-action:hover { transform: translateY(-2px); filter: brightness(1.2); }
+
+.auth .toggle-link {
+  display: block;
+  margin: 20px auto 0;
+  background: none;
+  border: 0;
+  color: #1a086e;
+  font-size: 17px;
+  text-align: center;
+  text-decoration: underline;
+  white-space: pre-line;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .auth .wrap { grid-template-columns: 1fr; }
+  .auth .strip,
+  .auth .big { display: none; }
+  .auth .brand { justify-content: flex-start; padding: 22px 24px; }
+  .auth .mini { position: static; }
+  .auth .card { padding: 28px 24px; }
+  .auth .header-banner { font-size: 38px; }
+}
+
+
+/* ---------- 7. Profile page ---------- */
+.right a.on { color: var(--brand); }
+a.tag { text-decoration: none; }
+
+.pf { grid-area: feed; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* Header card: cover, avatar, name, bio */
+.pf-top { position: relative; padding-bottom: 20px; background: var(--card); border-radius: 28px; }
+
+.cover {
+  height: 120px;
+  background: linear-gradient(135deg, #9d8bd6, #cdb8ec);
+  border-radius: 28px 28px 0 0;
+}
+
+.pf-ava {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 110px;
+  height: 110px;
+  margin: -62px auto 0;
+  background: var(--card);
+  border: 4px solid var(--brand);
+  border-radius: 50%;
+  overflow: hidden;
+  font-size: 70px;
+}
+
+.pf-ava img { width: 100%; height: 100%; object-fit: cover; }
+.pf-ava img.default { transform: scale(1.28); }
+
+.pf-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 28px 0;
+}
+
+.pf-info h2 { margin: 0; font: 700 28px 'Gelasio', Georgia, serif; }
+.pf-full { color: var(--muted); }
+.pf-bio { padding: 8px 28px 0; overflow-wrap: anywhere; }
+
+.pf-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+
+.edit {
+  padding: 10px 20px;
+  background: var(--brand);
+  color: var(--brand-ink);
+  border: 0;
+  border-radius: 12px;
+  font: 700 16px 'Noto Sans Thai', sans-serif;
+  cursor: pointer;
+}
+
+.edit.alt { background: var(--chip); color: var(--ink); }
+
+a.edit { display: inline-block; text-decoration: none; }
+
+/* Settings menu (three dots, own profile only) */
+.pf-menu { position: absolute; top: 14px; right: 14px; z-index: 5; }
+
+.dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, .8);
+  color: #1a1a1a;
+  border: 0;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.dots:hover { background: #fff; }
+.dots svg { fill: currentColor; stroke: none; }
+
+.menu-list {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  min-width: 200px;
+  padding: 6px;
+  background: var(--card);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+}
+
+.menu-list button {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--ink);
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-list button:hover { background: var(--chip); }
+.menu-list .danger { color: #e04848; }
+
+/* Stats, interests, friends, posts */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+.stat {
+  padding: 14px 8px;
+  background: var(--card);
+  border: 1px solid var(--chip);
+  border-radius: 20px;
+  text-align: center;
+}
+
+.stat b { display: block; font-size: 22px; }
+.stat span { font-size: 13px; color: var(--muted); }
+
+.pf-int { padding: 20px 24px; background: var(--card); border-radius: 28px; }
+.pf-int h3 { margin: 0 0 10px; font: 700 18px 'Noto Sans Thai', sans-serif; }
+.pf-int .chips { margin: 0; }
+
+a.chip { color: inherit; text-decoration: none; }
+a.chip:hover { background: var(--bar); }
+
+.plist { display: flex; flex-direction: column; gap: 10px; }
+
+.pitem {
+  display: block;
+  padding: 12px 16px;
+  background: var(--field);
+  border-radius: 18px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pitem:hover { filter: brightness(.96); }
+.pitem b { font: 700 17px 'Gelasio', 'Noto Sans Thai', Georgia, serif; }
+.pitem .meta { margin: 2px 0 0; }
+.pitem .chips { margin: 6px 0 0; }
+
+/* Edit profile and change password dialogs */
+.form-error { min-height: 20px; margin-top: 10px; color: #e04848; font-size: 14px; }
+
+dialog textarea {
+  width: 100%;
+  min-height: 90px;
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bar);
+  color: var(--ink);
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+  resize: vertical;
+}
+
+dialog input[type="file"] { padding: 8px 0; background: none; }
+
+dialog input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 16px;
+  background: var(--chip);
+  color: var(--ink);
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.flabel { display: block; margin-top: 14px; font-weight: 600; }
+.flabel small { display: block; font-weight: 400; color: var(--muted); }
+
+.remove-photo {
+  display: block;
+  margin-top: 8px;
+  padding: 8px 16px;
+  background: transparent;
+  color: #e04848;
+  border: 1.5px solid #e04848;
+  border-radius: 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.remove-photo:disabled { opacity: .6; cursor: default; }
+
+@media (max-width: 520px) {
+  .stats { gap: 8px; }
+  .pf-info { flex-direction: column; }
+  .pf-actions { justify-content: flex-start; }
+}
+
+
+/* ---------- 8. Messages page ---------- */
+.author-link { color: inherit; text-decoration: none; }
+.author-link:hover .name,
+a.author-link:hover { text-decoration: underline; }
+
+/* Red unread counter on the mail icon */
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #e0245e;
+  color: #fff;
+  border-radius: 9px;
+  font: 700 11px/18px sans-serif;
+  text-align: center;
+}
+
+/* Conversation list (left column) */
+.convos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 200px;
+  padding: 12px;
+  background: var(--card);
+  border-radius: 24px;
+}
+
+.convo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--ink);
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.convo:hover,
+.convo.on { background: var(--chip); }
+
+.convo b { display: flex; align-items: center; gap: 8px; }
+
+.convo .prev {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dot { width: 10px; height: 10px; background: #e0245e; border-radius: 50%; }
+
+/* Friends list under the conversations: tap a friend to start a chat */
+.friends-box { padding: 14px; background: var(--card); border-radius: 24px; }
+.friends-box h4 { margin: 0 0 10px; font: 700 16px 'Noto Sans Thai', sans-serif; }
+
+.fchips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.fchip {
+  padding: 6px 14px;
+  background: var(--chip);
+  color: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fchip:hover,
+.fchip.on { background: var(--brand); color: var(--brand-ink); }
+
+/* Conversation (centre) */
+.thread {
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+  background: var(--card);
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.t-head {
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--chip);
+  font: 700 20px 'Gelasio', 'Noto Sans Thai', Georgia, serif;
+}
+
+.t-head a { color: inherit; text-decoration: none; }
+
+.t-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 55vh;
+  padding: 18px 22px;
+  overflow-y: auto;
+}
+
+.t-empty { margin: auto; padding: 20px; text-align: center; color: var(--muted); }
+
+.bubble {
+  max-width: 75%;
+  padding: 9px 14px;
+  background: var(--chip);
+  border-radius: 18px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.bubble.me { align-self: flex-end; background: var(--brand); color: var(--brand-ink); }
+.bubble small { display: block; margin-top: 2px; font-size: 10px; opacity: .7; }
+
+.t-form { display: flex; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--chip); }
+
+.t-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px;
+  background: var(--field);
+  color: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  outline: none;
+}
+
+.t-form button {
+  padding: 10px 22px;
+  background: var(--brand);
+  color: var(--brand-ink);
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
