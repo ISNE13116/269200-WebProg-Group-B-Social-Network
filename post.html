@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    try { if (!JSON.parse(localStorage.getItem('cmuh-session'))) throw 0; }
+    catch (e) { location.replace('login.html'); }
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Create Your Post - MorCor MaChill</title>
+  <link href="https://fonts.googleapis.com/css2?family=Gelasio:wght@600;700&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('cmuh-theme');
+        if (theme) document.documentElement.dataset.theme = theme;
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <div class="logo"><a href="index.html">MorCor<br>MaChill</a></div>
+
+    <form class="search" action="index.html">
+      <svg viewBox="0 0 24 24" style="font-size:28px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/></svg>
+      <input name="q" type="search" placeholder="Search posts or #tags">
+    </form>
+
+    <aside class="side">
+      <a class="post-btn" href="post.html">Post!</a>
+      <div class="tags" id="tags"></div>
+    </aside>
+
+    <main class="feed">
+      <form class="panel" id="f">
+        <h1>Create Your Post</h1>
+
+        <input id="title" placeholder="Title" maxlength="60" required>
+
+        <div class="r2">
+          <input id="location" placeholder="Location (e.g. อ่างแก้ว มช.)" maxlength="100" required>
+          <input id="max" type="number" min="2" max="500" placeholder="Max people" title="Maximum number of people">
+        </div>
+
+        <div class="quick-locs">
+          <span class="quick-label">Quick spots:</span>
+          <button type="button" class="qchip" onclick="setLoc('อ่างแก้ว มช.')">อ่างแก้ว มช</button>
+          <button type="button" class="qchip" onclick="setLoc('สนามกีฬากลาง มช.')">สนามกีฬากลาง มช</button>
+          <button type="button" class="qchip" onclick="setLoc('หอสมุด มช.')">หอสมุด มช</button>
+          <button type="button" class="qchip" onclick="setLoc('หน้ามอ มช.')">หน้ามอ มช</button>
+          <button type="button" class="qchip" onclick="setLoc('หลังมอ มช.')">หลังมอ มช</button>
+          <button type="button" class="qchip" onclick="setLoc('อ่างตึง มช.')">อ่างตึง มช</button>
+        </div>
+
+        <input id="interest" placeholder="Interests (comma-separated, e.g. running, healthy)" maxlength="80">
+        <textarea id="details" placeholder="Details"></textarea>
+
+        <button class="send" type="submit">Post</button>
+        <a class="back" href="index.html">Cancel</a>
+      </form>
+    </main>
+
+    <aside class="right">
+      <a class="mid" href="index.html" title="Home">
+        <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+      </a>
+      <a class="mid" href="favorites.html" title="Favorites">
+        <svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>
+      </a>
+      <a class="mid" href="profile.html" title="Profile">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3.2"/><path d="M5.5 19c1.5-3 4-4 6.5-4s5 1 6.5 4"/></svg>
+      </a>
+      <a class="mid" href="message.html" title="Messages">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 7 9-7"/></svg>
+        <span class="badge pip" id="badge" hidden></span>
+      </a>
+      <a class="mid" href="notifications.html" title="Notifications">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge" id="notifBadge" hidden></span>
+      </a>
+      <button class="mid" id="theme" title="Toggle theme">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+      </button>
+      <button class="mid" id="logout" title="Log out">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </aside>
+
+  </div>
+
+  <dialog id="ask" class="ask">
+    <h3 id="askTitle"></h3>
+    <p id="askText"></p>
+    <div class="row">
+      <button id="askNo">Cancel</button>
+      <button class="go" id="askOk">OK</button>
+    </div>
+  </dialog>
+
+  <script>
+    const POSTS_KEY = 'cmuh-posts2';
+    const SESSION_KEY = 'cmuh-session';
+    const MESSAGES_KEY = 'cmuh-messages';
+    const NOTIFS_KEY = 'cmuh-notifs';
+    const DEFAULT_TAGS = ['#sports', '#running', '#basketball', '#football', '#swimmingwithus'];
+
+    const $ = (id) => document.getElementById(id);
+
+    function load(key, fallback) {
+      try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+      catch (e) { return fallback; }
+    }
+
+    function save(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+    }
+
+    function esc(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(text).replace(/[&<>"']/g, (ch) => map[ch]);
+    }
+
+    function ask(title, text, okLabel, danger) {
+      return new Promise((resolve) => {
+        const dlg = $('ask');
+        $('askTitle').textContent = title;
+        $('askText').textContent = text;
+        $('askOk').textContent = okLabel;
+        $('askOk').className = danger ? 'go danger' : 'go';
+        const done = (value) => { dlg.close(); resolve(value); };
+        $('askOk').onclick = () => done(true);
+        $('askNo').onclick = () => done(false);
+        dlg.oncancel = () => resolve(false);
+        dlg.showModal();
+      });
+    }
+
+    const ME = (load(SESSION_KEY, {}).username || 'CMU').split('@')[0];
+    const MY = ME.toLowerCase();
+
+    function tagList() {
+      const tags = new Set(DEFAULT_TAGS);
+      load(POSTS_KEY, []).forEach((p) => (p.interest || []).forEach((t) => tags.add('#' + t.toLowerCase())));
+      return [...tags];
+    }
+
+    function updateBadges() {
+      const lastRead = load('cmuh-read:' + MY, {});
+      const nMsg = load(MESSAGES_KEY, []).filter((m) => m.to === MY && m.t > (lastRead[m.from] || 0)).length;
+      $('badge').hidden = !nMsg;
+
+      const notifs = load(NOTIFS_KEY, []).filter((n) => n.to.toLowerCase() === MY && !n.read);
+      $('notifBadge').textContent = notifs.length > 9 ? '9+' : notifs.length;
+      $('notifBadge').hidden = !notifs.length;
+    }
+
+    function setLoc(loc) {
+      $('location').value = loc;
+    }
+
+    $('tags').innerHTML = tagList().map((t) =>
+      `<button class="tag" onclick="location.href='index.html?tag=${encodeURIComponent(t)}'">${esc(t)}</button>`
+    ).join('');
+
+    $('f').addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const interest = $('interest').value
+        .split(/[,\s]+/)
+        .map((t) => t.replace(/^#+/, '').trim())
+        .filter(Boolean);
+
+      const post = {
+        id: Date.now(),
+        author: ME,
+        t: Date.now(),
+        title: $('title').value.trim(),
+        location: $('location').value.trim(),
+        max: Math.max(2, parseInt($('max').value, 10) || 10),
+        interest,
+        details: $('details').value.trim(),
+        members: [ME],
+        pending: [],
+        comments: []
+      };
+
+      const posts = load(POSTS_KEY, null) || [];
+      posts.unshift(post);
+      save(POSTS_KEY, posts);
+
+      location.href = 'index.html';
+    });
+
+    $('theme').onclick = () => {
+      const root = document.documentElement;
+      const isDark = getComputedStyle(root).getPropertyValue('--bg').trim() === '#1b1818';
+      const next = isDark ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem('cmuh-theme', next); } catch (e) {}
+    };
+
+    $('logout').onclick = async () => {
+      if (!await ask('Log out?', 'You will need to log in again to use MorCor MaChill.', 'Log out')) return;
+      try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+      location.replace('login.html');
+    };
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === MESSAGES_KEY || e.key === NOTIFS_KEY) updateBadges();
+    });
+
+    updateBadges();
+  </script>
+</body>
+</html>

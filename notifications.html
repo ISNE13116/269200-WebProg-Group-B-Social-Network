@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    try { if (!JSON.parse(localStorage.getItem('cmuh-session'))) throw 0; }
+    catch (e) { location.replace('login.html'); }
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Notifications - MorCor MaChill</title>
+  <link href="https://fonts.googleapis.com/css2?family=Gelasio:wght@600;700&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('cmuh-theme');
+        if (theme) document.documentElement.dataset.theme = theme;
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <div class="logo"><a href="index.html">MorCor<br>MaChill</a></div>
+
+    <form class="search" action="index.html">
+      <svg viewBox="0 0 24 24" style="font-size:28px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/></svg>
+      <input name="q" type="search" placeholder="Search posts or #tags">
+    </form>
+
+    <aside class="side">
+      <a class="post-btn" href="post.html">Post!</a>
+      <div class="tags" id="tags"></div>
+    </aside>
+
+    <main class="feed">
+      <div class="page-box">
+        <h2>Notifications</h2>
+        <div class="notif-list" id="notifList"></div>
+      </div>
+    </main>
+
+    <aside class="right">
+      <a class="mid" href="index.html" title="Home">
+        <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+      </a>
+      <a class="mid" href="favorites.html" title="Favorites">
+        <svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>
+      </a>
+      <a class="mid" href="profile.html" title="Profile">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3.2"/><path d="M5.5 19c1.5-3 4-4 6.5-4s5 1 6.5 4"/></svg>
+      </a>
+      <a class="mid" href="message.html" title="Messages">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 7 9-7"/></svg>
+        <span class="badge pip" id="badge" hidden></span>
+      </a>
+      <a class="mid on" href="notifications.html" title="Notifications">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge" id="notifBadge" hidden></span>
+      </a>
+      <button class="mid" id="theme" title="Toggle theme">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+      </button>
+      <button class="mid" id="logout" title="Log out">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </aside>
+
+  </div>
+
+  <dialog id="ask" class="ask">
+    <h3 id="askTitle"></h3>
+    <p id="askText"></p>
+    <div class="row">
+      <button id="askNo">Cancel</button>
+      <button class="go" id="askOk">OK</button>
+    </div>
+  </dialog>
+
+  <script>
+    const NOTIFS_KEY = 'cmuh-notifs';
+    const MESSAGES_KEY = 'cmuh-messages';
+    const SESSION_KEY = 'cmuh-session';
+    const POSTS_KEY = 'cmuh-posts2';
+    const FRIENDS_KEY = 'cmuh-friends';
+    const REQUESTS_KEY = 'cmuh-friend-requests';
+    const DEFAULT_TAGS = ['#sports', '#running', '#basketball', '#football', '#swimmingwithus'];
+
+    const sessionUser = load(SESSION_KEY, {}).username || 'CMU';
+    const ME = sessionUser.split('@')[0].toLowerCase();
+    const $ = (id) => document.getElementById(id);
+
+    function load(key, fallback) {
+      try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+      catch (e) { return fallback; }
+    }
+
+    function save(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+    }
+
+    function esc(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(text).replace(/[&<>"']/g, (ch) => map[ch]);
+    }
+
+    function timeAgo(time) {
+      const min = Math.floor((Date.now() - time) / 60000);
+      if (min < 1) return 'just now';
+      if (min < 60) return `${min} min ago`;
+      const hr = Math.floor(min / 60);
+      return hr < 24 ? `${hr} h ago` : `${Math.floor(hr / 24)} d ago`;
+    }
+
+    function ask(title, text, okLabel, danger) {
+      return new Promise((resolve) => {
+        const dlg = $('ask');
+        $('askTitle').textContent = title;
+        $('askText').textContent = text;
+        $('askOk').textContent = okLabel;
+        $('askOk').className = danger ? 'go danger' : 'go';
+        const done = (value) => { dlg.close(); resolve(value); };
+        $('askOk').onclick = () => done(true);
+        $('askNo').onclick = () => done(false);
+        dlg.oncancel = () => resolve(false);
+        dlg.showModal();
+      });
+    }
+
+    const friendsOf = (name) => load(FRIENDS_KEY, {})[name] || [];
+
+    function setFriend(a, b, on) {
+      const data = load(FRIENDS_KEY, {});
+      [[a, b], [b, a]].forEach(([x, y]) => {
+        const list = (data[x] || []).filter((n) => n !== y);
+        data[x] = on ? [...list, y] : list;
+      });
+      save(FRIENDS_KEY, data);
+    }
+
+    function tagList() {
+      const tags = new Set(DEFAULT_TAGS);
+      load(POSTS_KEY, []).forEach((p) => (p.interest || []).forEach((t) => tags.add('#' + t.toLowerCase())));
+      return [...tags];
+    }
+
+    function updateBadges() {
+      const lastReadMsg = load('cmuh-read:' + ME, {});
+      const nMsg = load(MESSAGES_KEY, []).filter((m) => m.to === ME && m.t > (lastReadMsg[m.from] || 0)).length;
+      $('badge').hidden = !nMsg;
+
+      const notifs = load(NOTIFS_KEY, []).filter((n) => n.to.toLowerCase() === ME && !n.read);
+      $('notifBadge').textContent = notifs.length > 9 ? '9+' : notifs.length;
+      $('notifBadge').hidden = !notifs.length;
+    }
+
+    function requestMatcher(n) {
+      const from = String(n.from).toLowerCase();
+      return (r) => (n.reqId ? r.id === n.reqId : r.from === from && r.to === ME);
+    }
+
+    function itemHtml(n, unread, posts, requests, friends) {
+      const cls = unread ? 'notif-item unread' : 'notif-item';
+
+      if (n.type === 'friend_request') {
+        const from = String(n.from).toLowerCase();
+        const pending = requests.some(requestMatcher(n));
+        let actions;
+
+        if (pending) {
+          actions = `
+            <button class="join small ok" onclick="respond(${n.id}, true)">Accept</button>
+            <button class="join small no" onclick="respond(${n.id}, false)">Decline</button>`;
+        } else if (n.status === 'declined') {
+          actions = '<span class="notif-state">Declined</span>';
+        } else if (n.status === 'accepted' || friends.includes(from)) {
+          actions = '<span class="notif-state">Friends ✓</span>';
+        } else {
+          actions = '<span class="notif-state">Request cancelled</span>';
+        }
+
+        return `
+          <div class="${cls}">
+            <div>
+              <div><a class="author-link" href="profile.html?user=${encodeURIComponent(from)}"><b>${esc(from)}</b> ↗</a> sent you a friend request</div>
+              <div class="time">${timeAgo(n.t)}</div>
+            </div>
+            <div class="notif-actions">${actions}</div>
+          </div>`;
+      }
+
+      if (n.type === 'friend_accept') {
+        return `
+          <a class="${cls}" href="profile.html?user=${encodeURIComponent(n.from)}">
+            <div>
+              <div>${esc(n.text)}</div>
+              <div class="time">${timeAgo(n.t)}</div>
+            </div>
+            <div class="notif-link">View profile ↗</div>
+          </a>`;
+      }
+
+      const targetPost = posts.find((p) => n.text.includes(`"${p.title}"`));
+      const link = targetPost ? `index.html?post=${targetPost.id}` : 'index.html';
+
+      return `
+        <a class="${cls}" href="${link}">
+          <div>
+            <div>${esc(n.text)}</div>
+            <div class="time">${timeAgo(n.t)}</div>
+          </div>
+          <div class="notif-link">View activity ↗</div>
+        </a>`;
+    }
+
+    function renderNotifs() {
+      let notifs = load(NOTIFS_KEY, []);
+      const mine = notifs.filter((n) => n.to.toLowerCase() === ME);
+
+      const latest = {};
+      mine.forEach((n) => {
+        if (n.type !== 'friend_request') return;
+        const key = String(n.from).toLowerCase();
+        if (!latest[key] || n.t > latest[key].t) latest[key] = n;
+      });
+
+      const stale = new Set(mine.filter((n) =>
+        n.type === 'friend_request' && latest[String(n.from).toLowerCase()] !== n));
+
+      notifs = notifs.filter((n) => !stale.has(n));
+      const visible = mine.filter((n) => !stale.has(n));
+      const unreadIds = new Set(visible.filter((n) => !n.read).map((n) => n.id));
+
+      visible.forEach((n) => { n.read = true; });
+      save(NOTIFS_KEY, notifs);
+
+      const posts = load(POSTS_KEY, []);
+      const requests = load(REQUESTS_KEY, []);
+      const friends = friendsOf(ME);
+
+      $('notifList').innerHTML = visible.length
+        ? visible.map((n) => itemHtml(n, unreadIds.has(n.id), posts, requests, friends)).join('')
+        : '<div class="empty">No notifications yet</div>';
+
+      $('tags').innerHTML = tagList().map((t) =>
+        `<button class="tag" onclick="location.href='index.html?tag=${encodeURIComponent(t)}'">${esc(t)}</button>`
+      ).join('');
+
+      updateBadges();
+    }
+
+    function respond(id, accept) {
+      const notifs = load(NOTIFS_KEY, []);
+      const n = notifs.find((x) => x.id === id);
+      if (!n) return;
+
+      const from = String(n.from).toLowerCase();
+      const requests = load(REQUESTS_KEY, []);
+      const matches = requestMatcher(n);
+      const pending = requests.some(matches);
+
+      save(REQUESTS_KEY, requests.filter((r) => !matches(r)));
+      n.status = accept ? 'accepted' : 'declined';
+
+      if (accept && pending) {
+        setFriend(ME, from, true);
+        notifs.unshift({
+          id: Date.now(),
+          to: from,
+          from: ME,
+          type: 'friend_accept',
+          text: `${ME} accepted your friend request`,
+          t: Date.now(),
+          read: false
+        });
+      }
+
+      save(NOTIFS_KEY, notifs);
+      renderNotifs();
+    }
+
+    $('theme').onclick = () => {
+      const root = document.documentElement;
+      const isDark = getComputedStyle(root).getPropertyValue('--bg').trim() === '#1b1818';
+      const next = isDark ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem('cmuh-theme', next); } catch (e) {}
+    };
+
+    $('logout').onclick = async () => {
+      if (!await ask('Log out?', 'You will need to log in again to use MorCor MaChill.', 'Log out')) return;
+      try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+      location.replace('login.html');
+    };
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === NOTIFS_KEY || e.key === REQUESTS_KEY) renderNotifs();
+      if (e.key === MESSAGES_KEY) updateBadges();
+    });
+
+    renderNotifs();
+  </script>
+</body>
+</html>
