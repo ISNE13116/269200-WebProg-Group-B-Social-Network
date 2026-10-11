@@ -18,6 +18,27 @@
     })();
   </script>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .chat-user-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: inherit;
+      text-decoration: none;
+    }
+    .chat-user-link:hover { text-decoration: underline; }
+    .chat-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: var(--chip);
+      display: flex;
+      flex: none;
+    }
+    .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .chat-avatar img.default { transform: scale(1.28); }
+  </style>
 </head>
 <body>
   <div class="app">
@@ -60,6 +81,10 @@
         <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 7 9-7"/></svg>
         <span class="badge" id="badge" hidden></span>
       </a>
+      <a class="mid" href="notifications.html" title="Notifications">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge" id="notifBadge" hidden></span>
+      </a>
       <button class="mid" id="theme" title="Toggle theme">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
       </button>
@@ -83,6 +108,8 @@
     const MESSAGES_KEY = 'cmuh-messages';
     const FRIENDS_KEY = 'cmuh-friends';
     const SESSION_KEY = 'cmuh-session';
+    const NOTIFS_KEY = 'cmuh-notifs';
+    const DEFAULT_AVATAR = 'pic/profile.png';
 
     const $ = (id) => document.getElementById(id);
 
@@ -100,6 +127,13 @@
       return String(text).replace(/[&<>"']/g, (ch) => map[ch]);
     }
 
+    function avatarHtml(name) {
+      const profile = load('cmuh-profile:' + String(name).toLowerCase() + '@cmu.ac.th', {});
+      return profile.avatar
+        ? `<img src="${profile.avatar}" alt="">`
+        : `<img class="default" src="${DEFAULT_AVATAR}" alt="">`;
+    }
+
     function timeAgo(time) {
       const min = Math.floor((Date.now() - time) / 60000);
       if (min < 1) return 'just now';
@@ -110,14 +144,12 @@
 
     function ask(title, text, okLabel, danger) {
       return new Promise((resolve) => {
-        const dlg = $('ask');
-        $('askTitle').textContent = title;
+        const dlg = $('ask');$('askTitle').textContent = title;
         $('askText').textContent = text;
         $('askOk').textContent = okLabel;
         $('askOk').className = danger ? 'go danger' : 'go';
         const done = (value) => { dlg.close(); resolve(value); };
-        $('askOk').onclick = () => done(true);
-        $('askNo').onclick = () => done(false);
+        $('askOk').onclick = () => done(true);$('askNo').onclick = () => done(false);
         dlg.oncancel = () => resolve(false);
         dlg.showModal();
       });
@@ -134,11 +166,15 @@
       return load(MESSAGES_KEY, []).filter((m) => m.to === ME && m.from === name && m.t > lastRead).length;
     }
 
-    function updateBadge() {
+    function updateBadges() {
       const lastRead = load(READ_KEY, {});
-      const n = load(MESSAGES_KEY, []).filter((m) => m.to === ME && m.t > (lastRead[m.from] || 0)).length;
-      $('badge').textContent = n > 9 ? '9+' : n;
-      $('badge').hidden = !n;
+      const nMsg = load(MESSAGES_KEY, []).filter((m) => m.to === ME && m.t > (lastRead[m.from] || 0)).length;
+      $('badge').textContent = nMsg > 9 ? '9+' : nMsg;
+      $('badge').hidden = !nMsg;
+
+      const notifs = load(NOTIFS_KEY, []).filter(n => n.to.toLowerCase() === ME && !n.read);
+      $('notifBadge').textContent = notifs.length > 9 ? '9+' : notifs.length;
+      $('notifBadge').hidden = !notifs.length;
     }
 
     function markRead(name) {
@@ -185,8 +221,7 @@
 
     function renderThread() {
       if (!partner) {
-        $('tHead').textContent = 'Messages';
-        $('tBody').innerHTML = '<div class="t-empty">Select a conversation or a friend, or open someone\'s profile and press "Send message".</div>';
+        $('tHead').textContent = 'Messages';$('tBody').innerHTML = '<div class="t-empty">Select a conversation or a friend, or open someone\'s profile and press "Send message".</div>';
         $('tForm').hidden = true;
         return;
       }
@@ -194,13 +229,17 @@
       const msgs = load(MESSAGES_KEY, []).filter((m) =>
         (m.from === ME && m.to === partner) || (m.from === partner && m.to === ME));
 
-      $('tHead').innerHTML = `<a href="profile.html?user=${encodeURIComponent(partner)}">${esc(partner)}</a>`;
+      $('tHead').innerHTML = `
+        <a class="chat-user-link" href="profile.html?user=${encodeURIComponent(partner)}" title="View profile">
+          <span class="chat-avatar">${avatarHtml(partner)}</span>
+          <span>${esc(partner)} ↗</span>
+        </a>`;
       $('tBody').innerHTML = msgs.length
         ? msgs.map((m) => `
             <div class="bubble ${m.from === ME ? 'me' : ''}">${esc(m.text)}<small>${timeAgo(m.t)}</small></div>`).join('')
         : '<div class="t-empty">No messages yet. Say hi!</div>';
       $('tForm').hidden = false;
-      $('tBody').scrollTop = $('tBody').scrollHeight;
+      $('tBody').scrollTop =$('tBody').scrollHeight;
     }
 
     function refresh() {
@@ -208,7 +247,7 @@
       renderList();
       renderFriends();
       renderThread();
-      updateBadge();
+      updateBadges();
     }
 
     function openChat(btn) {
@@ -218,8 +257,7 @@
       $('tInput').focus();
     }
 
-    $('convos').addEventListener('click', (e) => openChat(e.target.closest('.convo')));
-    $('fchips').addEventListener('click', (e) => openChat(e.target.closest('.fchip')));
+    $('convos').addEventListener('click', (e) => openChat(e.target.closest('.convo')));$('fchips').addEventListener('click', (e) => openChat(e.target.closest('.fchip')));
 
     $('tForm').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -235,7 +273,7 @@
     });
 
     window.addEventListener('storage', (e) => {
-      if (e.key === MESSAGES_KEY || e.key === FRIENDS_KEY) refresh();
+      if (e.key === MESSAGES_KEY || e.key === FRIENDS_KEY || e.key === NOTIFS_KEY) refresh();
     });
 
     $('theme').onclick = () => {

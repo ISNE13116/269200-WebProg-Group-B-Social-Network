@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <script>
-    // Auth guard: if nobody is logged in, go back to the login page
     try { if (!JSON.parse(localStorage.getItem('cmuh-session'))) throw 0; }
     catch (e) { location.replace('login.html'); }
   </script>
@@ -11,7 +10,6 @@
   <title>Create Your Post - CMU Hangout</title>
   <link href="https://fonts.googleapis.com/css2?family=Gelasio:wght@600;700&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
   <script>
-    // Apply the saved theme (light / dark) before the page is drawn
     (function () {
       try {
         var theme = localStorage.getItem('cmuh-theme');
@@ -20,6 +18,11 @@
     })();
   </script>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .quick-locs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: -6px; margin-bottom: 8px; }
+    .qchip { padding: 4px 10px; background: var(--chip); border: 0; border-radius: 999px; font: 600 12px 'Noto Sans Thai', sans-serif; cursor: pointer; color: var(--ink); }
+    .qchip:hover { background: var(--brand); color: var(--brand-ink); }
+  </style>
 </head>
 <body>
   <div class="pg">
@@ -32,8 +35,18 @@
       <input id="title" placeholder="Title" maxlength="60" required>
 
       <div class="r2">
-        <input id="location" placeholder="Location (e.g. Huay Kaew Reservoir)" maxlength="100" required>
+        <input id="location" placeholder="Location (e.g. อ่างแก้ว มช.)" maxlength="100" required>
         <input id="max" type="number" min="2" max="500" placeholder="Max people" title="Maximum number of people">
+      </div>
+
+      <div class="quick-locs">
+        <span style="font-size:12px; color:var(--muted); align-self:center;">Quick spots:</span>
+        <button type="button" class="qchip" onclick="setLoc('อ่างแก้ว มช.')">อ่างแก้ว มช</button>
+        <button type="button" class="qchip" onclick="setLoc('สนามกีฬากลาง มช.')">สนามกีฬากลาง มช</button>
+        <button type="button" class="qchip" onclick="setLoc('หอสมุด มช.')">หอสมุด มช</button>
+        <button type="button" class="qchip" onclick="setLoc('หน้ามอ มช.')">หน้ามอ มช</button>
+        <button type="button" class="qchip" onclick="setLoc('หลังมอ มช.')">หลังมอ มช</button>
+        <button type="button" class="qchip" onclick="setLoc('อ่างตึง มช.')">อ่างตึง มช</button>
       </div>
 
       <input id="interest" placeholder="Interests (comma-separated, e.g. running, healthy)" maxlength="80">
@@ -58,10 +71,13 @@
 
     const ME = (load(SESSION_KEY, {}).username || 'CMU').split('@')[0];
 
+    function setLoc(loc) {
+      $('location').value = loc;
+    }
+
     $('f').addEventListener('submit', (e) => {
       e.preventDefault();
 
-      // "running, #healthy" -> ['running', 'healthy']
       const interest = $('interest').value
         .split(/[,\s]+/)
         .map((t) => t.replace(/^#+/, '').trim())
@@ -73,10 +89,10 @@
         t: Date.now(),
         title: $('title').value.trim(),
         location: $('location').value.trim(),
-        max: Math.max(2, parseInt($('max').value, 10) || 10),   // default: 10 people
+        max: Math.max(2, parseInt($('max').value, 10) || 10),
         interest,
         details: $('details').value.trim(),
-        members: [ME],        // the author is the first member
+        members: [ME],
         comments: []
       };
 

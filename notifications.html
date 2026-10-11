@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    try { if (!JSON.parse(localStorage.getItem('cmuh-session'))) throw 0; }
+    catch (e) { location.replace('login.html'); }
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Notifications - CMU Hangout</title>
+  <link href="https://fonts.googleapis.com/css2?family=Gelasio:wght@600;700&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('cmuh-theme');
+        if (theme) document.documentElement.dataset.theme = theme;
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .notif-list { display: flex; flex-direction: column; gap: 10px; }
+    .notif-item { padding: 14px 18px; background: var(--card); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; text-decoration: none; color: inherit; transition: filter .15s; }
+    .notif-item:hover { filter: brightness(0.95); }
+    .notif-item.unread { border-left: 4px solid var(--brand); }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <div class="logo"><a href="index.html">CMU<br>HANGOUT</a></div>
+
+    <form class="search" action="index.html">
+      <svg viewBox="0 0 24 24" style="font-size:28px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/></svg>
+      <input name="q" type="search" placeholder="Search posts or #tags">
+    </form>
+
+    <aside class="side">
+      <a class="post-btn" href="post.html">Post!</a>
+      <div class="tags" id="tags"></div>
+    </aside>
+
+    <main class="feed">
+      <div style="background:var(--card); padding:20px; border-radius:24px;">
+        <h2 style="margin-top:0; font:700 24px 'Gelasio',serif;">Notifications</h2>
+        <div class="notif-list" id="notifList"></div>
+      </div>
+    </main>
+
+    <aside class="right">
+      <a class="mid" href="index.html" title="Home">
+        <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+      </a>
+      <a class="mid" href="profile.html" title="Profile">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3.2"/><path d="M5.5 19c1.5-3 4-4 6.5-4s5 1 6.5 4"/></svg>
+      </a>
+      <a class="mid" href="message.html" title="Messages">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 7 9-7"/></svg>
+        <span class="badge" id="badge" hidden></span>
+      </a>
+      <a class="mid on" href="notifications.html" title="Notifications">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge" id="notifBadge" hidden></span>
+      </a>
+      <button class="mid" id="theme" title="Toggle theme">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+      </button>
+      <button class="mid" id="logout" title="Log out">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </aside>
+
+  </div>
+
+  <script>
+    const NOTIFS_KEY = 'cmuh-notifs';
+    const MESSAGES_KEY = 'cmuh-messages';
+    const SESSION_KEY = 'cmuh-session';
+    const POSTS_KEY = 'cmuh-posts2';
+    const DEFAULT_TAGS = ['#sports', '#running', '#basketball', '#football', '#swimmingwithus'];
+
+    const sessionUser = load(SESSION_KEY, {}).username || 'CMU';
+    const ME = sessionUser.split('@')[0].toLowerCase();
+    const $ = (id) => document.getElementById(id);
+
+    function load(key, fallback) {
+      try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+      catch (e) { return fallback; }
+    }
+
+    function save(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+    }
+
+    function esc(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(text).replace(/[&<>"']/g, (ch) => map[ch]);
+    }
+
+    function timeAgo(time) {
+      const min = Math.floor((Date.now() - time) / 60000);
+      if (min < 1) return 'just now';
+      if (min < 60) return `${min} min ago`;
+      const hr = Math.floor(min / 60);
+      return hr < 24 ? `${hr} h ago` : `${Math.floor(hr / 24)} d ago`;
+    }
+
+    function updateBadges() {
+      const lastReadMsg = load('cmuh-read:' + ME, {});
+      const nMsg = load(MESSAGES_KEY, []).filter((m) => m.to === ME && m.t > (lastReadMsg[m.from] || 0)).length;
+      $('badge').textContent = nMsg > 9 ? '9+' : nMsg;
+      $('badge').hidden = !nMsg;
+
+      const notifs = load(NOTIFS_KEY, []).filter(n => n.to.toLowerCase() === ME && !n.read);
+      $('notifBadge').textContent = notifs.length > 9 ? '9+' : notifs.length;
+      $('notifBadge').hidden = !notifs.length;
+    }
+
+    function renderNotifs() {
+      let notifs = load(NOTIFS_KEY, []);
+      let myNotifs = notifs.filter(n => n.to.toLowerCase() === ME);
+
+      myNotifs.forEach(n => n.read = true);
+      save(NOTIFS_KEY, notifs);
+
+      const posts = load(POSTS_KEY, []);
+
+      $('notifList').innerHTML = myNotifs.length
+        ? myNotifs.map(n => {
+            // ค้นหา post id จากชื่อกิจกรรมในข้อความแจ้งเตือน
+            let targetPost = posts.find(p => n.text.includes(`"${p.title}"`));
+            let link = targetPost ? `index.html?post=${targetPost.id}` : 'index.html';
+
+            return `
+              <a class="notif-item" href="${link}">
+                <div>
+                  <div>${esc(n.text)}</div>
+                  <div class="time">${timeAgo(n.t)}</div>
+                </div>
+                <div style="font-size: 13px; color: var(--brand); font-weight: 600;">View activity ↗</div>
+              </a>`;
+          }).join('')
+        : '<div class="empty">No notifications yet</div>';
+
+      const tags = new Set(DEFAULT_TAGS);
+      $('tags').innerHTML = [...tags].map((t) =>
+        `<button class="tag" onclick="location.href='index.html?tag=${encodeURIComponent(t)}'">${esc(t)}</button>`
+      ).join('');
+    }
+
+    $('theme').onclick = () => {
+      const root = document.documentElement;
+      const isDark = getComputedStyle(root).getPropertyValue('--bg').trim() === '#1b1818';
+      const next = isDark ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem('cmuh-theme', next); } catch (e) {}
+    };
+
+    $('logout').onclick = () => {
+      try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+      location.replace('login.html');
+    };
+
+    renderNotifs();
+    updateBadges();
+  </script>
+</body>
+</html>

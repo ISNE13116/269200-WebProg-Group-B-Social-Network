@@ -50,6 +50,15 @@
                         </div>
                     </div>
 
+                    <div class="form-group hidden" id="facultyGroup">
+                        <label class="form-label" for="faculty">Faculty</label>
+                        <div class="field">
+                            <select id="faculty" class="form-input" style="padding-left: 20px;">
+                                <option value="" disabled selected>Select your faculty</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="msg" id="msg"></div>
                     <button type="submit" class="btn-action" id="submitBtn">Login</button>
                 </form>
@@ -63,6 +72,31 @@
     const USERS_KEY = 'cmuh-users';
     const SESSION_KEY = 'cmuh-session';
     const FEED_PAGE = 'index.html';
+
+    const FACULTIES = [
+        "Chiang Mai University Business School",
+        "College of Art, Media and Technology",
+        "Faculty of Agriculture",
+        "Faculty of Agro-Industry",
+        "Faculty of Architecture",
+        "Faculty of Associated Medical Sciences",
+        "Faculty of Dentistry",
+        "Faculty of Economics",
+        "Faculty of Education",
+        "Faculty of Engineering",
+        "Faculty of Fine Arts",
+        "Faculty of Humanities",
+        "Faculty of Law",
+        "Faculty of Mass Communication",
+        "Faculty of Medicine",
+        "Faculty of Nursing",
+        "Faculty of Pharmacy",
+        "Faculty of Political Science and Public Administration",
+        "Faculty of Science",
+        "Faculty of Social Sciences",
+        "Faculty of Veterinary Medicine",
+        "International College of Digital Innovation"
+    ];
 
     let isSignUpMode = false;
 
@@ -87,7 +121,8 @@
     function togglePassword() {
         const show = document.getElementById('password').type === 'password';
         ['password', 'confirmPassword'].forEach(id => {
-            document.getElementById(id).type = show ? 'text' : 'password';
+            const el = document.getElementById(id);
+            if (el) el.type = show ? 'text' : 'password';
         });
         document.getElementById('eyeOpen').toggleAttribute('hidden', !show);
         document.getElementById('eyeOff').toggleAttribute('hidden', show);
@@ -100,16 +135,31 @@
 
     if (load(SESSION_KEY, null)) location.replace(FEED_PAGE);
 
+    // Populate faculty dropdown sorted A-Z
+    const facultySelect = document.getElementById('faculty');
+    FACULTIES.forEach(fac => {
+        const opt = document.createElement('option');
+        opt.value = fac;
+        opt.textContent = fac;
+        facultySelect.appendChild(opt);
+    });
+
     function toggleView() {
         isSignUpMode = !isSignUpMode;
         showMsg('');
 
         const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
         const confirmPasswordInput = document.getElementById('confirmPassword');
+        const facultyGroup = document.getElementById('facultyGroup');
+        const facultyInput = document.getElementById('faculty');
 
         document.getElementById('headerBanner').innerText = isSignUpMode ? 'SIGN UP' : 'LOGIN';
         confirmPasswordGroup.classList.toggle('hidden', !isSignUpMode);
         confirmPasswordInput.required = isSignUpMode;
+        
+        facultyGroup.classList.toggle('hidden', !isSignUpMode);
+        facultyInput.required = isSignUpMode;
+
         document.getElementById('submitBtn').innerText = isSignUpMode ? 'Create an account' : 'Login';
         document.getElementById('toggleBtn').innerText =
             isSignUpMode ? 'Already have an account?\nLogin' : 'Create a new account';
@@ -125,18 +175,31 @@
 
         if (isSignUpMode) {
             const confirmPass = document.getElementById('confirmPassword').value;
+            const faculty = document.getElementById('faculty').value;
 
             if (!username.endsWith('@cmu.ac.th')) return showMsg('Only @cmu.ac.th emails are allowed');
             if (password.length < 6)              return showMsg('Password must be at least 6 characters');
             if (password !== confirmPass)         return showMsg('Passwords do not match');
+            if (!faculty)                         return showMsg('Please select your faculty');
             if (users[username])                  return showMsg('This account already exists');
 
-            users[username] = { passHash: await hashPassword(password) };
+            users[username] = { passHash: await hashPassword(password), faculty };
             save(USERS_KEY, users);
+
+            // Also initialize profile data with selected faculty
+            const profileKey = 'cmuh-profile:' + username;
+            const existingProfile = load(profileKey, {}); 
+            save(profileKey, { ...existingProfile, faculty });
         } else {
             const user = users[username];
             if (!user || user.passHash !== await hashPassword(password)) {
                 return showMsg('Incorrect username or password');
+            }
+            // Ensure profile has faculty if registered previously
+            const profileKey = 'cmuh-profile:' + username;
+            const existingProfile = load(profileKey, {});
+            if (!existingProfile.faculty && user.faculty) {
+                save(profileKey, { ...existingProfile, faculty: user.faculty });
             }
         }
 
