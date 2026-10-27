@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script>
+    try { if (!JSON.parse(localStorage.getItem('cmuh-session'))) throw 0; }
+    catch (e) { location.replace('login.html'); }
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Messages - MorCor MaChill</title>
+  <link href="https://fonts.googleapis.com/css2?family=Gelasio:wght@600;700&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('cmuh-theme');
+        if (theme) document.documentElement.dataset.theme = theme;
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <div class="logo"><a href="index.html">MorCor<br>MaChill</a></div>
+
+    <form class="search" action="index.html">
+      <svg viewBox="0 0 24 24" style="font-size:28px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/></svg>
+      <input name="q" type="search" placeholder="Search posts or #tags">
+    </form>
+
+    <aside class="side">
+      <a class="post-btn" href="post.html">Post!</a>
+      <div class="convos" id="convos"></div>
+      <div class="friends-box">
+        <h4>Friends</h4>
+        <div class="fchips" id="fchips"></div>
+      </div>
+    </aside>
+
+    <main class="feed">
+      <section class="thread">
+        <div class="t-head" id="tHead"></div>
+        <div class="t-body" id="tBody"></div>
+        <form class="t-form" id="tForm" hidden>
+          <input id="tInput" placeholder="Write a message..." maxlength="500" autocomplete="off">
+          <button type="submit">Send</button>
+        </form>
+      </section>
+    </main>
+
+    <aside class="right">
+      <a class="mid" href="index.html" title="Home">
+        <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+      </a>
+      <a class="mid" href="favorites.html" title="Favorites">
+        <svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>
+      </a>
+      <a class="mid" href="profile.html" title="Profile">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3.2"/><path d="M5.5 19c1.5-3 4-4 6.5-4s5 1 6.5 4"/></svg>
+      </a>
+      <a class="mid on" href="message.html" title="Messages">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 7 9-7"/></svg>
+        <span class="badge pip" id="badge" hidden></span>
+      </a>
+      <a class="mid" href="notifications.html" title="Notifications">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge" id="notifBadge" hidden></span>
+      </a>
+      <button class="mid" id="theme" title="Toggle theme">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+      </button>
+      <button class="mid" id="logout" title="Log out">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </aside>
+
+  </div>
+
+  <dialog id="ask" class="ask">
+    <h3 id="askTitle"></h3>
+    <p id="askText"></p>
+    <div class="row">
+      <button id="askNo">Cancel</button>
+      <button class="go" id="askOk">OK</button>
+    </div>
+  </dialog>
+
+  <script>
+    const MESSAGES_KEY = 'cmuh-messages';
+    const FRIENDS_KEY = 'cmuh-friends';
+    const SESSION_KEY = 'cmuh-session';
+    const NOTIFS_KEY = 'cmuh-notifs';
+    const DEFAULT_AVATAR = 'pic/profile.png';
+
+    const $ = (id) => document.getElementById(id);
+
+    function load(key, fallback) {
+      try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+      catch (e) { return fallback; }
+    }
+
+    function save(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+    }
+
+    function esc(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(text).replace(/[&<>"']/g, (ch) => map[ch]);
+    }
+
+    function avatarHtml(name) {
+      const profile = load('cmuh-profile:' + String(name).toLowerCase() + '@cmu.ac.th', {});
+      return profile.avatar
+        ? `<img src="${profile.avatar}" alt="">`
+        : `<img class="default" src="${DEFAULT_AVATAR}" alt="">`;
+    }
+
+    function timeAgo(time) {
+      const min = Math.floor((Date.now() - time) / 60000);
+      if (min < 1) return 'just now';
+      if (min < 60) return `${min} min ago`;
+      const hr = Math.floor(min / 60);
+      return hr < 24 ? `${hr} h ago` : `${Math.floor(hr / 24)} d ago`;
+    }
+
+    function ask(title, text, okLabel, danger) {
+      return new Promise((resolve) => {
+        const dlg = $('ask');
+        $('askTitle').textContent = title;
+        $('askText').textContent = text;
+        $('askOk').textContent = okLabel;
+        $('askOk').className = danger ? 'go danger' : 'go';
+        const done = (value) => { dlg.close(); resolve(value); };
+        $('askOk').onclick = () => done(true);
+        $('askNo').onclick = () => done(false);
+        dlg.oncancel = () => resolve(false);
+        dlg.showModal();
+      });
+    }
+
+    const ME = (load(SESSION_KEY, {}).username || 'cmu').split('@')[0].toLowerCase();
+    const READ_KEY = 'cmuh-read:' + ME;
+
+    let partner = (new URLSearchParams(location.search).get('to') || '').toLowerCase();
+    if (partner === ME) partner = '';
+
+    function unreadFrom(name) {
+      const lastRead = load(READ_KEY, {})[name] || 0;
+      return load(MESSAGES_KEY, []).filter((m) => m.to === ME && m.from === name && m.t > lastRead).length;
+    }
+
+    function updateBadges() {
+      const lastRead = load(READ_KEY, {});
+      const nMsg = load(MESSAGES_KEY, []).filter((m) => m.to === ME && m.t > (lastRead[m.from] || 0)).length;
+      $('badge').hidden = !nMsg;
+
+      const notifs = load(NOTIFS_KEY, []).filter((n) => n.to.toLowerCase() === ME && !n.read);
+      $('notifBadge').textContent = notifs.length > 9 ? '9+' : notifs.length;
+      $('notifBadge').hidden = !notifs.length;
+    }
+
+    function markRead(name) {
+      const lastRead = load(READ_KEY, {});
+      lastRead[name] = Date.now();
+      save(READ_KEY, lastRead);
+    }
+
+    function conversations() {
+      const map = {};
+      load(MESSAGES_KEY, [])
+        .filter((m) => m.from === ME || m.to === ME)
+        .forEach((m) => {
+          const other = m.from === ME ? m.to : m.from;
+          (map[other] = map[other] || []).push(m);
+        });
+
+      if (partner && !map[partner]) map[partner] = [];
+
+      return Object.entries(map)
+        .map(([name, list]) => ({ name, list, last: list[list.length - 1] }))
+        .sort((a, b) => (b.last ? b.last.t : Infinity) - (a.last ? a.last.t : Infinity));
+    }
+
+    function renderList() {
+      const list = conversations();
+
+      $('convos').innerHTML = list.length
+        ? list.map((c) => `
+            <button class="convo ${c.name === partner ? 'on' : ''}" data-name="${esc(c.name)}">
+              <b>${esc(c.name)} ${unreadFrom(c.name) ? '<i class="dot"></i>' : ''}</b>
+              <span class="prev">${c.last ? esc(c.last.text) : 'New conversation'}</span>
+            </button>`).join('')
+        : '<div class="time" style="padding:8px">No conversations yet</div>';
+    }
+
+    function renderFriends() {
+      const friends = load(FRIENDS_KEY, {})[ME] || [];
+
+      $('fchips').innerHTML = friends.length
+        ? friends.map((n) => `<button class="fchip ${n === partner ? 'on' : ''}" data-name="${esc(n)}">${esc(n)}</button>`).join('')
+        : '<span class="time">No friends yet. Add friends from their profile.</span>';
+    }
+
+    function renderThread() {
+      if (!partner) {
+        $('tHead').textContent = 'Messages';
+        $('tBody').innerHTML = '<div class="t-empty">Select a conversation or a friend, or open someone\'s profile and press "Send message".</div>';
+        $('tForm').hidden = true;
+        return;
+      }
+
+      const msgs = load(MESSAGES_KEY, []).filter((m) =>
+        (m.from === ME && m.to === partner) || (m.from === partner && m.to === ME));
+
+      $('tHead').innerHTML = `
+        <a class="chat-user-link" href="profile.html?user=${encodeURIComponent(partner)}" title="View profile">
+          <span class="chat-avatar">${avatarHtml(partner)}</span>
+          <span>${esc(partner)} ↗</span>
+        </a>`;
+      $('tBody').innerHTML = msgs.length
+        ? msgs.map((m) => `
+            <div class="bubble ${m.from === ME ? 'me' : ''}">${esc(m.text)}<small>${timeAgo(m.t)}</small></div>`).join('')
+        : '<div class="t-empty">No messages yet. Say hi!</div>';
+      $('tForm').hidden = false;
+      $('tBody').scrollTop = $('tBody').scrollHeight;
+    }
+
+    function refresh() {
+      if (partner) markRead(partner);
+      renderList();
+      renderFriends();
+      renderThread();
+      updateBadges();
+    }
+
+    function openChat(btn) {
+      if (!btn) return;
+      partner = btn.dataset.name;
+      refresh();
+      $('tInput').focus();
+    }
+
+    $('convos').addEventListener('click', (e) => openChat(e.target.closest('.convo')));
+    $('fchips').addEventListener('click', (e) => openChat(e.target.closest('.fchip')));
+
+    $('tForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = $('tInput').value.trim();
+      if (!text || !partner) return;
+
+      const msgs = load(MESSAGES_KEY, []);
+      msgs.push({ id: Date.now(), from: ME, to: partner, text, t: Date.now() });
+      save(MESSAGES_KEY, msgs);
+
+      $('tInput').value = '';
+      refresh();
+    });
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === MESSAGES_KEY || e.key === FRIENDS_KEY || e.key === NOTIFS_KEY) refresh();
+    });
+
+    $('theme').onclick = () => {
+      const root = document.documentElement;
+      const isDark = getComputedStyle(root).getPropertyValue('--bg').trim() === '#1b1818';
+      const next = isDark ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem('cmuh-theme', next); } catch (e) {}
+    };
+
+    $('logout').onclick = async () => {
+      if (!await ask('Log out?', 'You will need to log in again to use MorCor MaChill.', 'Log out')) return;
+      try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+      location.replace('login.html');
+    };
+
+    refresh();
+  </script>
+</body>
+</html>
